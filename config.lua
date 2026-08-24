@@ -11,6 +11,10 @@ Config.HelmetTexture = -1
 Config.UseStreamedHelmetProps = true
 Config.HelmetPropLoadTimeout = 5000
 Config.HideHelmetPropInFirstPerson = true
+Config.EnableHelmetPositionEditor = true
+Config.HelmetPositionCommand = 'helmpositie'
+Config.HelmetPositionStep = 0.005
+Config.HelmetRotationStep = 0.5
 
 -- Het type wordt automatisch gekozen aan de hand van de spawnnaam.
 -- Zonder geldige kledingoverride gebruikt het script een veilige GTA-helm.
