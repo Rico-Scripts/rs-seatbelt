@@ -3,8 +3,8 @@ game 'gta5'
 lua54 'yes'
 
 author 'Rico Scripts'
-description 'Veiligheidsgordel met HUD-status, uitstapblokkering en botsingsejectie'
-version '1.0.0'
+description 'Veiligheidsgordel en handmatige motorhelm met HUD-status en botsingsejectie'
+version '1.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
