@@ -102,7 +102,12 @@ Config.MotorcycleTypes = {
 }
 
 -- Voeg add-onmotoren toe als: ['spawnnaam'] = 'sport' / 'offroad' / 'cruiser' / 'scooter'.
-Config.CustomMotorcycleTypes = {}
+Config.CustomMotorcycleTypes = {
+    ['wisedev-skull'] = 'cruiser',
+    ['wisedev_skull'] = 'cruiser',
+    ['wisedevskull'] = 'cruiser',
+    ['skull'] = 'cruiser',
+}
 
 -- De officiële GTA-basiscollectie ('') hieronder is de fallback als een object niet laadt.
 -- Optioneel kun je ze vervangen door een exacte EUP-helm. Collectienamen blijven stabiel.
