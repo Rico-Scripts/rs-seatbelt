@@ -10,6 +10,7 @@ local savedHeadwear
 local activeHelmetType
 local helmetObject
 local helmetUsesObject = false
+local helmetEditor
 local motorcycleTypeByHash = {}
 
 for typeName, models in pairs(Config.MotorcycleTypes or {}) do
@@ -119,6 +120,17 @@ local function deleteHelmetObject()
     helmetUsesObject = false
 end
 
+local function refreshHelmetObjectAttachment(ped, objectConfig)
+    if not helmetObject or not DoesEntityExist(helmetObject) or type(objectConfig) ~= 'table' then return end
+    local position = objectConfig.position or {}
+    local rotation = objectConfig.rotation or {}
+    DetachEntity(helmetObject, true, true)
+    AttachEntityToEntity(helmetObject, ped, GetPedBoneIndex(ped, tonumber(objectConfig.bone) or 31086),
+        tonumber(position.x) or 0.0, tonumber(position.y) or 0.0, tonumber(position.z) or 0.0,
+        tonumber(rotation.x) or 0.0, tonumber(rotation.y) or 0.0, tonumber(rotation.z) or 0.0,
+        true, true, false, true, 2, true)
+end
+
 local function applyStreamedHelmetProp(ped, objectConfig)
     if not Config.UseStreamedHelmetProps or type(objectConfig) ~= 'table' then return false end
     local model = joaat(tostring(objectConfig.model or ''))
@@ -136,20 +148,15 @@ local function applyStreamedHelmetProp(ped, objectConfig)
         return false
     end
 
-    local position = objectConfig.position or {}
-    local rotation = objectConfig.rotation or {}
     SetEntityAsMissionEntity(object, true, true)
     SetEntityCollision(object, false, false)
     SetEntityInvincible(object, true)
-    AttachEntityToEntity(object, ped, GetPedBoneIndex(ped, tonumber(objectConfig.bone) or 31086),
-        tonumber(position.x) or 0.0, tonumber(position.y) or 0.0, tonumber(position.z) or 0.0,
-        tonumber(rotation.x) or 0.0, tonumber(rotation.y) or 0.0, tonumber(rotation.z) or 0.0,
-        true, true, false, true, 2, true)
+    helmetObject = object
+    helmetUsesObject = true
+    refreshHelmetObjectAttachment(ped, objectConfig)
     SetModelAsNoLongerNeeded(model)
 
     ClearPedProp(ped, 0)
-    helmetObject = object
-    helmetUsesObject = true
     return true
 end
 
@@ -287,6 +294,136 @@ end
 RegisterCommand(Config.Command, toggleSafety, false)
 RegisterKeyMapping(Config.Command, 'Gordel vast/los of motorhelm op/af', 'keyboard', Config.Key)
 
+local function cloneVectorTable(source)
+    source = source or {}
+    return {
+        x = tonumber(source.x) or 0.0,
+        y = tonumber(source.y) or 0.0,
+        z = tonumber(source.z) or 0.0,
+    }
+end
+
+local function closeHelmetEditor(restore)
+    if not helmetEditor then return end
+    if restore then
+        helmetEditor.object.position = cloneVectorTable(helmetEditor.originalPosition)
+        helmetEditor.object.rotation = cloneVectorTable(helmetEditor.originalRotation)
+        refreshHelmetObjectAttachment(PlayerPedId(), helmetEditor.object)
+    end
+    helmetEditor = nil
+    lib.hideTextUI()
+end
+
+local function showHelmetEditorHelp()
+    local mode = helmetEditor and helmetEditor.mode == 'rotation' and 'ROTATIE' or 'POSITIE'
+    lib.showTextUI(('[Helm afstellen: %s]  Pijlen: X/Y  |  PgUp/PgDn: Z  |  R: wisselen  |  Shift: sneller  |  Enter: kopiëren  |  Backspace: annuleren'):format(mode), {
+        position = 'top-center',
+        icon = 'helmet-safety',
+    })
+end
+
+local function helmetConfigBlock(editor)
+    local object = editor.object
+    local position = object.position
+    local rotation = object.rotation
+    return ([[object = {
+    model = '%s',
+    bone = %d,
+    position = { x = %.4f, y = %.4f, z = %.4f },
+    rotation = { x = %.4f, y = %.4f, z = %.4f },
+},]]):format(tostring(object.model), tonumber(object.bone) or 31086,
+        position.x, position.y, position.z, rotation.x, rotation.y, rotation.z)
+end
+
+local function startHelmetEditor()
+    if not Config.EnableHelmetPositionEditor then
+        return notify('De helm-afstelmodus staat uit in config.lua.', 'error')
+    end
+    if helmetEditor then
+        closeHelmetEditor(true)
+        return notify('Helm-afstelmodus geannuleerd.', 'inform')
+    end
+
+    local ped = PlayerPedId()
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if not isMotorcycle(vehicle) then
+        return notify('Ga eerst op de motor zitten.', 'error')
+    end
+    if not motorcycleHelmet or not helmetObject or not DoesEntityExist(helmetObject) then
+        return notify('Zet eerst de gestreamde helm op met B.', 'error')
+    end
+
+    local typeName, profile = getHelmetType(vehicle)
+    if not profile or type(profile.object) ~= 'table' then
+        return notify('Voor dit motortype ontbreekt een objectprofiel.', 'error')
+    end
+
+    profile.object.position = cloneVectorTable(profile.object.position)
+    profile.object.rotation = cloneVectorTable(profile.object.rotation)
+    helmetEditor = {
+        typeName = typeName,
+        object = profile.object,
+        mode = 'position',
+        originalPosition = cloneVectorTable(profile.object.position),
+        originalRotation = cloneVectorTable(profile.object.rotation),
+    }
+    showHelmetEditorHelp()
+    notify(('Afstelmodus gestart voor %s.'):format(profile.label or typeName), 'success')
+end
+
+RegisterCommand(Config.HelmetPositionCommand or 'helmpositie', startHelmetEditor, false)
+
+CreateThread(function()
+    while true do
+        if not helmetEditor then
+            Wait(400)
+        else
+            local ped = PlayerPedId()
+            local vehicle = GetVehiclePedIsIn(ped, false)
+            if not isMotorcycle(vehicle) or not helmetObject or not DoesEntityExist(helmetObject) then
+                closeHelmetEditor(true)
+                notify('Helm-afstelmodus gestopt.', 'inform')
+            else
+                for _, control in ipairs({ 10, 11, 21, 45, 172, 173, 174, 175, 177, 191 }) do
+                    DisableControlAction(0, control, true)
+                end
+
+                if IsDisabledControlJustPressed(0, 45) then
+                    helmetEditor.mode = helmetEditor.mode == 'position' and 'rotation' or 'position'
+                    showHelmetEditorHelp()
+                elseif IsDisabledControlJustPressed(0, 177) then
+                    closeHelmetEditor(true)
+                    notify('Wijzigingen geannuleerd.', 'inform')
+                elseif IsDisabledControlJustPressed(0, 191) then
+                    local block = helmetConfigBlock(helmetEditor)
+                    print(('^2[rs-seatbelt] %s helmwaarden:^7\n%s'):format(helmetEditor.typeName, block))
+                    if lib.setClipboard then lib.setClipboard(block) end
+                    closeHelmetEditor(false)
+                    notify('Helmwaarden gekopieerd en in de F8-console gezet.', 'success')
+                else
+                    local target = helmetEditor.object[helmetEditor.mode]
+                    local baseStep = helmetEditor.mode == 'position'
+                        and (tonumber(Config.HelmetPositionStep) or 0.005)
+                        or (tonumber(Config.HelmetRotationStep) or 0.5)
+                    local step = IsDisabledControlPressed(0, 21) and baseStep * 5.0 or baseStep
+                    local changed = false
+
+                    if IsDisabledControlPressed(0, 174) then target.x = target.x - step changed = true end
+                    if IsDisabledControlPressed(0, 175) then target.x = target.x + step changed = true end
+                    if IsDisabledControlPressed(0, 172) then target.y = target.y + step changed = true end
+                    if IsDisabledControlPressed(0, 173) then target.y = target.y - step changed = true end
+                    if IsDisabledControlPressed(0, 10) then target.z = target.z + step changed = true end
+                    if IsDisabledControlPressed(0, 11) then target.z = target.z - step changed = true end
+
+                    if changed then refreshHelmetObjectAttachment(ped, helmetEditor.object) end
+                end
+                Wait(0)
+            end
+        end
+    end
+end)
+
+
 CreateThread(function()
     publishState(false)
     publishHelmetState(false)
@@ -348,6 +485,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource == GetCurrentResourceName() then
         local ped = PlayerPedId()
+        if helmetEditor then closeHelmetEditor(true) end
         deleteHelmetObject()
         publishState(false)
         if motorcycleHelmet and IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
