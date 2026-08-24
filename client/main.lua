@@ -1,5 +1,6 @@
 local buckled = false
 local motorcycleHelmet = false
+local helmetBusy = false
 local activeVehicle
 local activeMotorcycle
 local previousSpeed = 0.0
@@ -43,6 +44,32 @@ local function unbuckle(silent)
     if not silent then notify('Gordel los.', 'inform') end
 end
 
+local function loadAnimationDictionary(dict)
+    if HasAnimDictLoaded(dict) then return true end
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + Config.HelmetAnimationLoadTimeout
+    while not HasAnimDictLoaded(dict) and GetGameTimer() < timeout do Wait(10) end
+    return HasAnimDictLoaded(dict)
+end
+
+local function runHelmetAnimation(ped, animation, applyVisual)
+    local loaded = animation and loadAnimationDictionary(animation.dict)
+    if not loaded then
+        applyVisual()
+        return
+    end
+
+    local duration = math.max(250, tonumber(animation.duration) or 1000)
+    local applyAt = math.min(duration, math.max(0, tonumber(animation.applyAt) or math.floor(duration / 2)))
+    TaskPlayAnim(ped, animation.dict, animation.clip, 8.0, -8.0, duration,
+        Config.HelmetAnimationFlag, 0.0, false, false, false)
+    Wait(applyAt)
+    applyVisual()
+    Wait(math.max(0, duration - applyAt))
+    StopAnimTask(ped, animation.dict, animation.clip, 2.0)
+    RemoveAnimDict(animation.dict)
+end
+
 local function removeMotorcycleHelmet(ped, silent)
     if motorcycleHelmet or IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
     SetPedHelmet(ped, false)
@@ -51,21 +78,35 @@ local function removeMotorcycleHelmet(ped, silent)
 end
 
 local function toggleMotorcycleHelmet(ped)
+    if helmetBusy or IsEntityDead(ped) then return end
+    helmetBusy = true
+
     if motorcycleHelmet then
-        return removeMotorcycleHelmet(ped, false)
+        runHelmetAnimation(ped, Config.HelmetAnimations.takeOff, function()
+            removeMotorcycleHelmet(ped, true)
+        end)
+        PlaySoundFrontend(-1, 'NAV_LEFT_RIGHT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        notify('Helm af.', 'inform')
+    else
+        runHelmetAnimation(ped, Config.HelmetAnimations.putOn, function()
+            SetPedHelmet(ped, true)
+            GivePedHelmet(ped, false, Config.HelmetFlag, Config.HelmetTexture)
+            publishHelmetState(true)
+        end)
+        PlaySoundFrontend(-1, 'NAV_UP_DOWN', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        notify('Helm op.', 'success')
     end
 
-    SetPedHelmet(ped, true)
-    GivePedHelmet(ped, false, Config.HelmetFlag, Config.HelmetTexture)
-    publishHelmetState(true)
-    PlaySoundFrontend(-1, 'NAV_UP_DOWN', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-    notify('Helm op.', 'success')
+    helmetBusy = false
 end
 
 local function toggleSafety()
     local ped = PlayerPedId()
     local vehicle = GetVehiclePedIsIn(ped, false)
-    if isMotorcycle(vehicle) then return toggleMotorcycleHelmet(ped) end
+    if isMotorcycle(vehicle) then
+        activeMotorcycle = vehicle
+        return toggleMotorcycleHelmet(ped)
+    end
     if not supportsSeatbelt(vehicle) then return notify('Dit voertuig heeft geen veiligheidsgordel.', 'error') end
     publishState(not buckled)
     PlaySoundFrontend(-1, buckled and 'NAV_UP_DOWN' or 'NAV_LEFT_RIGHT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
