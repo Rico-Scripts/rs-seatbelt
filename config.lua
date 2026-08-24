@@ -17,25 +17,37 @@ Config.MotorcycleHelmetTypes = {
         label = 'Integraalhelm',
         helmetFlag = 8192,
         texture = -1,
-        props = {},
+        props = {
+            male = { collection = '', drawable = 18, texture = 7 },
+            female = { collection = '', drawable = 18, texture = 7 },
+        },
     },
     offroad = {
         label = 'Crosshelm',
         helmetFlag = 8192,
         texture = -1,
-        props = {},
+        props = {
+            male = { collection = '', drawable = 16, texture = 5 },
+            female = { collection = '', drawable = 16, texture = 5 },
+        },
     },
     cruiser = {
         label = 'Open helm',
         helmetFlag = 4096,
         texture = -1,
-        props = {},
+        props = {
+            male = { collection = '', drawable = 17, texture = 5 },
+            female = { collection = '', drawable = 17, texture = 5 },
+        },
     },
     scooter = {
         label = 'Scooterhelm',
         helmetFlag = 4096,
         texture = -1,
-        props = {},
+        props = {
+            male = { collection = '', drawable = 17, texture = 7 },
+            female = { collection = '', drawable = 17, texture = 7 },
+        },
     },
 }
 
@@ -61,7 +73,8 @@ Config.MotorcycleTypes = {
 -- Voeg add-onmotoren toe als: ['spawnnaam'] = 'sport' / 'offroad' / 'cruiser' / 'scooter'.
 Config.CustomMotorcycleTypes = {}
 
--- Optioneel: exacte EUP-helm per type. Collectienamen blijven stabiel bij GTA-updates.
+-- De standaardprofielen hierboven gebruiken de officiële GTA-basiscollectie ('').
+-- Optioneel kun je ze vervangen door een exacte EUP-helm. Collectienamen blijven stabiel.
 -- Een ongeldige/missende override valt automatisch terug op de GTA-helm hierboven.
 -- Voorbeeld:
 -- Config.MotorcycleHelmetTypes.sport.props = {
