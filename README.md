@@ -8,6 +8,7 @@ Zelfstandig gordelscript voor de Rico Scripts ESX-stack.
 - Motorhelm op/af met dezelfde `B`-toets of `/gordel` op motoren
 - Drie meegeleverde helmprops: integraal, cross met bril en open chopperhelm
 - Automatische helmkeuze voor sport, offroad, cruiser/chopper en scooter
+- WiseDev Skull-varianten worden als cruiser/chopper ingedeeld
 - Live helm-afstelmodus via `/helmpositie`
 - Werkende opzet- en afzetanimatie waarbij de helm halverwege wisselt
 - Voorkomt dat GTA automatisch een helm opzet bij het motorrijden
