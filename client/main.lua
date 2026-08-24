@@ -61,12 +61,32 @@ local function runHelmetAnimation(ped, animation, applyVisual)
 
     local duration = math.max(250, tonumber(animation.duration) or 1000)
     local applyAt = math.min(duration, math.max(0, tonumber(animation.applyAt) or math.floor(duration / 2)))
+
+    -- De standaard motor-taak gebruikt zelf een secondary upper-body animatie.
+    -- Maak die eerst vrij, anders blijven de handen zichtbaar aan het stuur.
+    ClearPedSecondaryTask(ped)
+    Wait(50)
+
     TaskPlayAnim(ped, animation.dict, animation.clip, 8.0, -8.0, duration,
         Config.HelmetAnimationFlag, 0.0, false, false, false)
+
+    -- Op sommige add-on motoren overschrijft de rijtaak de eerste aanvraag.
+    -- Vraag de animatie eenmaal opnieuw aan wanneer hij niet gestart is.
+    local startTimeout = GetGameTimer() + 300
+    while not IsEntityPlayingAnim(ped, animation.dict, animation.clip, 3)
+        and GetGameTimer() < startTimeout do
+        Wait(10)
+    end
+    if not IsEntityPlayingAnim(ped, animation.dict, animation.clip, 3) then
+        TaskPlayAnim(ped, animation.dict, animation.clip, 8.0, -8.0, duration,
+            Config.HelmetAnimationFlag, 0.0, false, false, false)
+    end
+
     Wait(applyAt)
     applyVisual()
     Wait(math.max(0, duration - applyAt))
     StopAnimTask(ped, animation.dict, animation.clip, 2.0)
+    ClearPedSecondaryTask(ped)
     RemoveAnimDict(animation.dict)
 end
 

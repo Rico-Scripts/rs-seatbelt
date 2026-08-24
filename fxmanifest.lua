@@ -4,7 +4,7 @@ lua54 'yes'
 
 author 'Rico Scripts'
 description 'Veiligheidsgordel en handmatige motorhelm met HUD-status en botsingsejectie'
-version '1.2.0'
+version '1.2.1'
 
 shared_scripts {
     '@ox_lib/init.lua',
