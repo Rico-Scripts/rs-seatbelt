@@ -8,6 +8,66 @@ Config.RemoveHelmetOnExit = true
 Config.MotorcycleClass = 8
 Config.HelmetFlag = 4096
 Config.HelmetTexture = -1
+
+-- Het type wordt automatisch gekozen aan de hand van de spawnnaam.
+-- Zonder geldige kledingoverride gebruikt het script een veilige GTA-helm.
+Config.DefaultMotorcycleHelmetType = 'sport'
+Config.MotorcycleHelmetTypes = {
+    sport = {
+        label = 'Integraalhelm',
+        helmetFlag = 8192,
+        texture = -1,
+        props = {},
+    },
+    offroad = {
+        label = 'Crosshelm',
+        helmetFlag = 8192,
+        texture = -1,
+        props = {},
+    },
+    cruiser = {
+        label = 'Open helm',
+        helmetFlag = 4096,
+        texture = -1,
+        props = {},
+    },
+    scooter = {
+        label = 'Scooterhelm',
+        helmetFlag = 4096,
+        texture = -1,
+        props = {},
+    },
+}
+
+-- Standaard GTA-motoren. Add-onmotoren kunnen hieronder in CustomMotorcycleTypes.
+Config.MotorcycleTypes = {
+    sport = {
+        'akuma', 'bati', 'bati2', 'carbonrs', 'defiler', 'double', 'hakuchou',
+        'hakuchou2', 'lectro', 'nemesis', 'pcj', 'powersurge', 'reever',
+        'ruffian', 'shinobi', 'shotaro', 'thrust', 'vader', 'vindicator', 'vortex',
+    },
+    offroad = {
+        'bf400', 'enduro', 'esskey', 'manchez', 'manchez2', 'manchez3',
+        'sanchez', 'sanchez2',
+    },
+    cruiser = {
+        'avarus', 'bagger', 'chimera', 'daemon', 'daemon2', 'gargoyle', 'hexer',
+        'innovation', 'nightblade', 'ratbike', 'sanctus', 'sovereign', 'wolfsbane',
+        'zombiea', 'zombieb',
+    },
+    scooter = { 'faggio', 'faggio2', 'faggio3' },
+}
+
+-- Voeg add-onmotoren toe als: ['spawnnaam'] = 'sport' / 'offroad' / 'cruiser' / 'scooter'.
+Config.CustomMotorcycleTypes = {}
+
+-- Optioneel: exacte EUP-helm per type. Collectienamen blijven stabiel bij GTA-updates.
+-- Een ongeldige/missende override valt automatisch terug op de GTA-helm hierboven.
+-- Voorbeeld:
+-- Config.MotorcycleHelmetTypes.sport.props = {
+--     male = { collection = 'jouw_male_collectie', drawable = 0, texture = 0 },
+--     female = { collection = 'jouw_female_collectie', drawable = 0, texture = 0 },
+-- }
 -- 51 houdt de animatie op het bovenlichaam terwijl de ped op de motor blijft zitten.
 Config.HelmetAnimationFlag = 51
 Config.HelmetAnimationLoadTimeout = 2500

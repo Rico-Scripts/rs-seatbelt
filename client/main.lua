@@ -6,6 +6,16 @@ local activeMotorcycle
 local previousSpeed = 0.0
 local previousVelocity = vector3(0.0, 0.0, 0.0)
 local lastEjection = 0
+local savedHeadwear
+local activeHelmetType
+local motorcycleTypeByHash = {}
+
+for typeName, models in pairs(Config.MotorcycleTypes or {}) do
+    for i = 1, #models do motorcycleTypeByHash[joaat(models[i])] = typeName end
+end
+for model, typeName in pairs(Config.CustomMotorcycleTypes or {}) do
+    motorcycleTypeByHash[joaat(model)] = typeName
+end
 
 local function notify(message, kind)
     lib.notify({ title = 'Voertuigveiligheid', description = message, type = kind or 'inform' })
@@ -29,7 +39,86 @@ end
 local function publishHelmetState(value)
     motorcycleHelmet = value == true
     LocalPlayer.state:set('motorcycleHelmet', motorcycleHelmet, true)
+    LocalPlayer.state:set('motorcycleHelmetType', motorcycleHelmet and activeHelmetType or nil, true)
     TriggerEvent('rs-seatbelt:client:helmetChanged', motorcycleHelmet)
+end
+
+local function getHelmetType(vehicle)
+    local typeName = motorcycleTypeByHash[GetEntityModel(vehicle)] or Config.DefaultMotorcycleHelmetType
+    if not Config.MotorcycleHelmetTypes[typeName] then typeName = Config.DefaultMotorcycleHelmetType end
+    return typeName, Config.MotorcycleHelmetTypes[typeName]
+end
+
+local function getPedProfileKey(ped)
+    local model = GetEntityModel(ped)
+    if model == joaat('mp_m_freemode_01') then return 'male' end
+    if model == joaat('mp_f_freemode_01') then return 'female' end
+    return 'other'
+end
+
+local function rememberHeadwear(ped)
+    savedHeadwear = {
+        drawable = GetPedPropIndex(ped, 0),
+        texture = GetPedPropTextureIndex(ped, 0),
+    }
+    if savedHeadwear.drawable >= 0 and type(GetPedPropCollectionName) == 'function'
+        and type(GetPedPropCollectionLocalIndex) == 'function' then
+        savedHeadwear.collection = GetPedPropCollectionName(ped, 0)
+        savedHeadwear.localDrawable = GetPedPropCollectionLocalIndex(ped, 0)
+    end
+end
+
+local function restoreHeadwear(ped)
+    local original = savedHeadwear
+    savedHeadwear = nil
+    if not original then return end
+    if original.drawable < 0 then return ClearPedProp(ped, 0) end
+
+    if original.collection and type(SetPedCollectionPropIndex) == 'function' then
+        SetPedCollectionPropIndex(ped, 0, original.collection, original.localDrawable,
+            math.max(0, original.texture), true)
+        return
+    end
+    SetPedPropIndex(ped, 0, original.drawable, math.max(0, original.texture), true)
+end
+
+local function applyConfiguredProp(ped, prop)
+    if type(prop) ~= 'table' then return false end
+    local drawable = tonumber(prop.drawable)
+    local texture = math.max(0, tonumber(prop.texture) or 0)
+    if not drawable or drawable < 0 then return false end
+
+    if prop.collection and type(GetNumberOfPedCollectionPropDrawableVariations) == 'function'
+        and type(GetNumberOfPedCollectionPropTextureVariations) == 'function'
+        and type(SetPedCollectionPropIndex) == 'function' then
+        local count = GetNumberOfPedCollectionPropDrawableVariations(ped, 0, prop.collection)
+        if drawable >= count then return false end
+        local textures = GetNumberOfPedCollectionPropTextureVariations(ped, 0, prop.collection, drawable)
+        if texture >= math.max(1, textures) then return false end
+        SetPedCollectionPropIndex(ped, 0, prop.collection, drawable, texture, true)
+        return GetPedPropIndex(ped, 0) >= 0
+    end
+
+    local count = GetNumberOfPedPropDrawableVariations(ped, 0)
+    if drawable >= count then return false end
+    local textures = GetNumberOfPedPropTextureVariations(ped, 0, drawable)
+    if texture >= math.max(1, textures) then return false end
+    SetPedPropIndex(ped, 0, drawable, texture, true)
+    return GetPedPropIndex(ped, 0) == drawable
+end
+
+local function applyMotorcycleHelmet(ped, vehicle)
+    local typeName, profile = getHelmetType(vehicle)
+    activeHelmetType = typeName
+    rememberHeadwear(ped)
+
+    local props = profile.props or {}
+    if not applyConfiguredProp(ped, props[getPedProfileKey(ped)] or props.other) then
+        SetPedHelmet(ped, true)
+        GivePedHelmet(ped, false, tonumber(profile.helmetFlag) or Config.HelmetFlag,
+            tonumber(profile.texture) or Config.HelmetTexture)
+    end
+    publishHelmetState(true)
 end
 
 local function resetTracking(vehicle)
@@ -93,11 +182,13 @@ end
 local function removeMotorcycleHelmet(ped, silent)
     if motorcycleHelmet or IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
     SetPedHelmet(ped, false)
+    restoreHeadwear(ped)
+    activeHelmetType = nil
     publishHelmetState(false)
     if not silent then notify('Helm af.', 'inform') end
 end
 
-local function toggleMotorcycleHelmet(ped)
+local function toggleMotorcycleHelmet(ped, vehicle)
     if helmetBusy or IsEntityDead(ped) then return end
     helmetBusy = true
 
@@ -109,9 +200,7 @@ local function toggleMotorcycleHelmet(ped)
         notify('Helm af.', 'inform')
     else
         runHelmetAnimation(ped, Config.HelmetAnimations.putOn, function()
-            SetPedHelmet(ped, true)
-            GivePedHelmet(ped, false, Config.HelmetFlag, Config.HelmetTexture)
-            publishHelmetState(true)
+            applyMotorcycleHelmet(ped, vehicle)
         end)
         PlaySoundFrontend(-1, 'NAV_UP_DOWN', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
         notify('Helm op.', 'success')
@@ -125,7 +214,7 @@ local function toggleSafety()
     local vehicle = GetVehiclePedIsIn(ped, false)
     if isMotorcycle(vehicle) then
         activeMotorcycle = vehicle
-        return toggleMotorcycleHelmet(ped)
+        return toggleMotorcycleHelmet(ped, vehicle)
     end
     if not supportsSeatbelt(vehicle) then return notify('Dit voertuig heeft geen veiligheidsgordel.', 'error') end
     publishState(not buckled)
@@ -208,6 +297,8 @@ AddEventHandler('onResourceStop', function(resource)
         local ped = PlayerPedId()
         publishState(false)
         if motorcycleHelmet and IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
+        restoreHeadwear(ped)
+        activeHelmetType = nil
         publishHelmetState(false)
         SetPedHelmet(ped, true)
     end
