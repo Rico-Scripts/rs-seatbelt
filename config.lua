@@ -8,6 +8,9 @@ Config.RemoveHelmetOnExit = true
 Config.MotorcycleClass = 8
 Config.HelmetFlag = 4096
 Config.HelmetTexture = -1
+Config.UseStreamedHelmetProps = true
+Config.HelmetPropLoadTimeout = 5000
+Config.HideHelmetPropInFirstPerson = true
 
 -- Het type wordt automatisch gekozen aan de hand van de spawnnaam.
 -- Zonder geldige kledingoverride gebruikt het script een veilige GTA-helm.
@@ -15,6 +18,12 @@ Config.DefaultMotorcycleHelmetType = 'sport'
 Config.MotorcycleHelmetTypes = {
     sport = {
         label = 'Integraalhelm',
+        object = {
+            model = 'integraalhelm',
+            bone = 31086,
+            position = { x = 0.0, y = 0.0, z = 0.0 },
+            rotation = { x = 0.0, y = 0.0, z = 0.0 },
+        },
         helmetFlag = 8192,
         texture = -1,
         props = {
@@ -24,6 +33,12 @@ Config.MotorcycleHelmetTypes = {
     },
     offroad = {
         label = 'Crosshelm',
+        object = {
+            model = 'crosshelm_met_bril',
+            bone = 31086,
+            position = { x = 0.0, y = 0.0, z = 0.0 },
+            rotation = { x = 0.0, y = 0.0, z = 0.0 },
+        },
         helmetFlag = 8192,
         texture = -1,
         props = {
@@ -33,6 +48,12 @@ Config.MotorcycleHelmetTypes = {
     },
     cruiser = {
         label = 'Open helm',
+        object = {
+            model = 'chopperhelm',
+            bone = 31086,
+            position = { x = 0.0, y = 0.0, z = 0.0 },
+            rotation = { x = 0.0, y = 0.0, z = 0.0 },
+        },
         helmetFlag = 4096,
         texture = -1,
         props = {
@@ -42,6 +63,12 @@ Config.MotorcycleHelmetTypes = {
     },
     scooter = {
         label = 'Scooterhelm',
+        object = {
+            model = 'chopperhelm',
+            bone = 31086,
+            position = { x = 0.0, y = 0.0, z = 0.0 },
+            rotation = { x = 0.0, y = 0.0, z = 0.0 },
+        },
         helmetFlag = 4096,
         texture = -1,
         props = {
@@ -73,7 +100,7 @@ Config.MotorcycleTypes = {
 -- Voeg add-onmotoren toe als: ['spawnnaam'] = 'sport' / 'offroad' / 'cruiser' / 'scooter'.
 Config.CustomMotorcycleTypes = {}
 
--- De standaardprofielen hierboven gebruiken de officiële GTA-basiscollectie ('').
+-- De officiële GTA-basiscollectie ('') hieronder is de fallback als een object niet laadt.
 -- Optioneel kun je ze vervangen door een exacte EUP-helm. Collectienamen blijven stabiel.
 -- Een ongeldige/missende override valt automatisch terug op de GTA-helm hierboven.
 -- Voorbeeld:

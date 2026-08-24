@@ -8,6 +8,8 @@ local previousVelocity = vector3(0.0, 0.0, 0.0)
 local lastEjection = 0
 local savedHeadwear
 local activeHelmetType
+local helmetObject
+local helmetUsesObject = false
 local motorcycleTypeByHash = {}
 
 for typeName, models in pairs(Config.MotorcycleTypes or {}) do
@@ -107,13 +109,59 @@ local function applyConfiguredProp(ped, prop)
     return GetPedPropIndex(ped, 0) == drawable
 end
 
+local function deleteHelmetObject()
+    if helmetObject and DoesEntityExist(helmetObject) then
+        DetachEntity(helmetObject, true, true)
+        SetEntityAsMissionEntity(helmetObject, true, true)
+        DeleteEntity(helmetObject)
+    end
+    helmetObject = nil
+    helmetUsesObject = false
+end
+
+local function applyStreamedHelmetProp(ped, objectConfig)
+    if not Config.UseStreamedHelmetProps or type(objectConfig) ~= 'table' then return false end
+    local model = joaat(tostring(objectConfig.model or ''))
+    if not IsModelInCdimage(model) or not IsModelValid(model) then return false end
+
+    RequestModel(model)
+    local timeout = GetGameTimer() + (tonumber(Config.HelmetPropLoadTimeout) or 5000)
+    while not HasModelLoaded(model) and GetGameTimer() < timeout do Wait(10) end
+    if not HasModelLoaded(model) then return false end
+
+    local coords = GetEntityCoords(ped)
+    local object = CreateObjectNoOffset(model, coords.x, coords.y, coords.z, false, false, false)
+    if object == 0 or not DoesEntityExist(object) then
+        SetModelAsNoLongerNeeded(model)
+        return false
+    end
+
+    local position = objectConfig.position or {}
+    local rotation = objectConfig.rotation or {}
+    SetEntityAsMissionEntity(object, true, true)
+    SetEntityCollision(object, false, false)
+    SetEntityInvincible(object, true)
+    AttachEntityToEntity(object, ped, GetPedBoneIndex(ped, tonumber(objectConfig.bone) or 31086),
+        tonumber(position.x) or 0.0, tonumber(position.y) or 0.0, tonumber(position.z) or 0.0,
+        tonumber(rotation.x) or 0.0, tonumber(rotation.y) or 0.0, tonumber(rotation.z) or 0.0,
+        true, true, false, true, 2, true)
+    SetModelAsNoLongerNeeded(model)
+
+    ClearPedProp(ped, 0)
+    helmetObject = object
+    helmetUsesObject = true
+    return true
+end
+
 local function applyMotorcycleHelmet(ped, vehicle)
     local typeName, profile = getHelmetType(vehicle)
     activeHelmetType = typeName
     rememberHeadwear(ped)
 
+    deleteHelmetObject()
+    local applied = applyStreamedHelmetProp(ped, profile.object)
     local props = profile.props or {}
-    if not applyConfiguredProp(ped, props[getPedProfileKey(ped)] or props.other) then
+    if not applied and not applyConfiguredProp(ped, props[getPedProfileKey(ped)] or props.other) then
         SetPedHelmet(ped, true)
         GivePedHelmet(ped, false, tonumber(profile.helmetFlag) or Config.HelmetFlag,
             tonumber(profile.texture) or Config.HelmetTexture)
@@ -180,7 +228,9 @@ local function runHelmetAnimation(ped, animation, applyVisual)
 end
 
 local function removeMotorcycleHelmet(ped, silent)
-    if motorcycleHelmet or IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
+    local usedObject = helmetUsesObject
+    deleteHelmetObject()
+    if not usedObject and (motorcycleHelmet or IsPedWearingHelmet(ped)) then RemovePedHelmet(ped, true) end
     SetPedHelmet(ped, false)
     restoreHeadwear(ped)
     activeHelmetType = nil
@@ -254,6 +304,9 @@ CreateThread(function()
                 SetPedHelmet(ped, false)
                 if IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
             end
+            if helmetObject and DoesEntityExist(helmetObject) and Config.HideHelmetPropInFirstPerson then
+                SetEntityVisible(helmetObject, GetFollowVehicleCamViewMode() ~= 4, false)
+            end
             Wait(150)
         else
             if activeMotorcycle then
@@ -295,6 +348,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource == GetCurrentResourceName() then
         local ped = PlayerPedId()
+        deleteHelmetObject()
         publishState(false)
         if motorcycleHelmet and IsPedWearingHelmet(ped) then RemovePedHelmet(ped, true) end
         restoreHeadwear(ped)
