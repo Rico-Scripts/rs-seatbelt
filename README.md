@@ -6,6 +6,7 @@ Zelfstandig gordelscript voor de Rico Scripts ESX-stack.
 
 - Gordel vast/los met `B` of `/gordel` in auto's
 - Motorhelm op/af met dezelfde `B`-toets of `/gordel` op motoren
+- Werkende opzet- en afzetanimatie waarbij de helm halverwege wisselt
 - Voorkomt dat GTA automatisch een helm opzet bij het motorrijden
 - Verwijdert de handmatig gekozen helm bij het afstappen
 - Voorkomt uitstappen zolang de gordel vastzit
