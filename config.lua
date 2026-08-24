@@ -8,6 +8,22 @@ Config.RemoveHelmetOnExit = true
 Config.MotorcycleClass = 8
 Config.HelmetFlag = 4096
 Config.HelmetTexture = -1
+Config.HelmetAnimationFlag = 48
+Config.HelmetAnimationLoadTimeout = 2500
+Config.HelmetAnimations = {
+    putOn = {
+        dict = 'missheistdockssetup1hardhat@',
+        clip = 'put_on_hat',
+        duration = 1100,
+        applyAt = 650,
+    },
+    takeOff = {
+        dict = 'missheist_agency2ahelmet',
+        clip = 'take_off_helmet_stand',
+        duration = 1000,
+        applyAt = 500,
+    },
+}
 Config.DisableExitWhileBuckled = true
 Config.EnableEjection = true
 Config.MinimumEjectSpeed = 65.0
