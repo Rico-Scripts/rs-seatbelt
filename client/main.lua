@@ -408,12 +408,30 @@ CreateThread(function()
                     local step = IsDisabledControlPressed(0, 21) and baseStep * 5.0 or baseStep
                     local changed = false
 
-                    if IsDisabledControlPressed(0, 174) then target.x = target.x - step changed = true end
-                    if IsDisabledControlPressed(0, 175) then target.x = target.x + step changed = true end
-                    if IsDisabledControlPressed(0, 172) then target.y = target.y + step changed = true end
-                    if IsDisabledControlPressed(0, 173) then target.y = target.y - step changed = true end
-                    if IsDisabledControlPressed(0, 10) then target.z = target.z + step changed = true end
-                    if IsDisabledControlPressed(0, 11) then target.z = target.z - step changed = true end
+                    if IsDisabledControlPressed(0, 174) then
+                        target.x = target.x - step
+                        changed = true
+                    end
+                    if IsDisabledControlPressed(0, 175) then
+                        target.x = target.x + step
+                        changed = true
+                    end
+                    if IsDisabledControlPressed(0, 172) then
+                        target.y = target.y + step
+                        changed = true
+                    end
+                    if IsDisabledControlPressed(0, 173) then
+                        target.y = target.y - step
+                        changed = true
+                    end
+                    if IsDisabledControlPressed(0, 10) then
+                        target.z = target.z + step
+                        changed = true
+                    end
+                    if IsDisabledControlPressed(0, 11) then
+                        target.z = target.z - step
+                        changed = true
+                    end
 
                     if changed then refreshHelmetObjectAttachment(ped, helmetEditor.object) end
                 end
